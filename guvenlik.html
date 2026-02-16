@@ -903,70 +903,78 @@ document.querySelectorAll('.qrBtn').forEach(b=>{
 
 /* ================= NFC SCANNER (ASıl OLAY) ================= */
 async function startNFCScan(pointName, btnEl){
-  if(!devriyeStarted){
-    showWarningModal("Önce devriyeyi başlatın!");
-    return;
-  }
+    if(!devriyeStarted){
+        showWarningModal("Önce devriyeyi başlatın!");
+        return;
+    }
 
-  if(!('NDEFReader' in window)){
-    showWarningModal("Bu cihaz NFC desteklemiyor!");
-    return;
-  }
+    if(!('NDEFReader' in window)){
+        showWarningModal("Bu cihaz NFC desteklemiyor!");
+        return;
+    }
 
-  // 🟦 TÜM BUTONLARI MAVİ YANIP SÖNECEK ŞEKİLDE AÇ
-  document.querySelectorAll('.qrBtn').forEach(b=>{
-      b.classList.add("nfcWaiting");
-  });
+    // 🔹 Tüm QR/NFC butonlarını mavi yanıp sönsün
+    document.querySelectorAll('.qrBtn').forEach(b=>{
+        b.classList.add("nfcWaiting");
+    });
 
-  showWarningModal("Telefonu NFC etikete yaklaştırın...",2000);
+    // 🔹 Ekranda sürekli uyarı
+    showWarningModal("Telefonu NFC etikete yaklaştırın...", 10000); // 10s sonrası tekrar gizlenebilir, animasyon devam eder
 
-  try {
-      const ndef = new NDEFReader();
-      await ndef.scan();
+    try {
+        const ndef = new NDEFReader();
+        await ndef.scan();
 
-      ndef.onreading = async event => {
-          const decoder = new TextDecoder();
-          const nfcId = decoder.decode(event.message.records[0].data).trim();
-          let matched=false;
+        ndef.onreading = async event => {
+            const decoder = new TextDecoder();
+            const nfcId = decoder.decode(event.message.records[0].data).trim();
+            let matched = false;
 
-          document.querySelectorAll('.qrBtn').forEach(btn=>{
-            if(btn.dataset.qrid === nfcId){
-              matched=true;
+            document.querySelectorAll('.qrBtn').forEach(btn => {
+                if(btn.dataset.qrid === nfcId){
+                    matched = true;
 
-              btn.classList.add('read');
-              btn.nextElementSibling.innerText='Tamamlandı';
+                    // 🔹 Doğru okutulunca animasyon durur
+                    btn.classList.add('read');
+                    btn.nextElementSibling.innerText = 'Tamamlandı';
 
-              // 🔔 Ding sesi
-              const audio = new Audio('ding.mp3');
-              audio.play();
+                    // 🔔 Basit beep sesi
+                    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioCtx.createOscillator();
+                    oscillator.type = 'square';
+                    oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // 880 Hz
+                    oscillator.connect(audioCtx.destination);
+                    oscillator.start();
+                    oscillator.stop(audioCtx.currentTime + 0.15); // 150ms çalsın
 
-              const p = btn.dataset.point;
-              if(!readPoints.includes(p)){
-                readPoints.push(p);
-              }
+                    const p = btn.dataset.point;
+                    if(!readPoints.includes(p)){
+                        readPoints.push(p);
+                    }
+                }
+            });
+
+            if(!matched){
+                // 🔹 Yanlış NFC okutulursa uyarı, animasyon devam eder
+                showWarningModal("Bu NFC sisteme kayıtlı değil!", 2000);
+                return;
             }
-          });
 
-          if(!matched){
-            showWarningModal("Bu NFC sisteme kayıtlı değil!");
-            return;
-          }
+            // 🔹 NFC tamamlandıktan sonra tüm butonların animasyonu durur
+            document.querySelectorAll('.qrBtn').forEach(b=>{
+                b.classList.remove("nfcWaiting");
+            });
 
-          await update(activeDevriyeRef,{ readPoints });
-          updateQRButtons();
+            await update(activeDevriyeRef, { readPoints });
+            updateQRButtons();
+        };
 
-          // 🟦 NFC tamamlandıktan sonra butonların yanıp sönmesi duracak
-          document.querySelectorAll('.qrBtn').forEach(b=>{
+    } catch(e){
+        showWarningModal("NFC okuma hatası!", 2000);
+        document.querySelectorAll('.qrBtn').forEach(b=>{
             b.classList.remove("nfcWaiting");
-          });
-      };
-
-  } catch(e){
-      showWarningModal("NFC okuma hatası!");
-      document.querySelectorAll('.qrBtn').forEach(b=>{
-        b.classList.remove("nfcWaiting");
-      });
-  }
+        });
+    }
 }
 
 
