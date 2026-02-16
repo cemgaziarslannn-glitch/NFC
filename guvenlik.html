@@ -881,9 +881,10 @@ document.querySelectorAll('.qrBtn').forEach(b=>{
       });
 
       if(!matched){
-        alert("QR eşleşmedi!");
-        return;
-      }
+  showWarningModal("Bu NFC sisteme kayıtlı değil!");
+  return;
+}
+
 
       await update(activeDevriyeRef,{ readPoints });
       updateQRButtons();
@@ -902,7 +903,6 @@ document.querySelectorAll('.qrBtn').forEach(b=>{
 
 /* ================= NFC SCANNER (ASıl OLAY) ================= */
 async function startNFCScan(pointName, btnEl){
-
   if(!devriyeStarted){
     showWarningModal("Önce devriyeyi başlatın!");
     return;
@@ -913,55 +913,61 @@ async function startNFCScan(pointName, btnEl){
     return;
   }
 
-  try{
+  // 🟦 TÜM BUTONLARI MAVİ YANIP SÖNECEK ŞEKİLDE AÇ
+  document.querySelectorAll('.qrBtn').forEach(b=>{
+      b.classList.add("nfcWaiting");
+  });
 
-    const ndef = new NDEFReader();
-    await ndef.scan();
+  showWarningModal("Telefonu NFC etikete yaklaştırın...",2000);
 
-    showWarningModal("Telefonu NFC etikete yaklaştırın...",2000);
+  try {
+      const ndef = new NDEFReader();
+      await ndef.scan();
 
-    ndef.onreading = async event => {
+      ndef.onreading = async event => {
+          const decoder = new TextDecoder();
+          const nfcId = decoder.decode(event.message.records[0].data).trim();
+          let matched=false;
 
-      const decoder = new TextDecoder();
+          document.querySelectorAll('.qrBtn').forEach(btn=>{
+            if(btn.dataset.qrid === nfcId){
+              matched=true;
 
-      const nfcId = decoder.decode(
-        event.message.records[0].data
-      ).trim();
+              btn.classList.add('read');
+              btn.nextElementSibling.innerText='Tamamlandı';
 
-      let matched=false;
+              // 🔔 Ding sesi
+              const audio = new Audio('ding.mp3');
+              audio.play();
 
-      document.querySelectorAll('.qrBtn').forEach(btn=>{
+              const p = btn.dataset.point;
+              if(!readPoints.includes(p)){
+                readPoints.push(p);
+              }
+            }
+          });
 
-        if(btn.dataset.qrid === nfcId){
-
-          matched=true;
-
-          btn.classList.add('read');
-          btn.nextElementSibling.innerText='Tamamlandı';
-
-          const p = btn.dataset.point;
-
-          if(!readPoints.includes(p)){
-            readPoints.push(p);
+          if(!matched){
+            showWarningModal("Bu NFC sisteme kayıtlı değil!");
+            return;
           }
-        }
 
+          await update(activeDevriyeRef,{ readPoints });
+          updateQRButtons();
+
+          // 🟦 NFC tamamlandıktan sonra butonların yanıp sönmesi duracak
+          document.querySelectorAll('.qrBtn').forEach(b=>{
+            b.classList.remove("nfcWaiting");
+          });
+      };
+
+  } catch(e){
+      showWarningModal("NFC okuma hatası!");
+      document.querySelectorAll('.qrBtn').forEach(b=>{
+        b.classList.remove("nfcWaiting");
       });
-
-      if(!matched){
-        showWarningModal("Bu NFC sisteme kayıtlı değil!");
-        return;
-      }
-
-      await update(activeDevriyeRef,{ readPoints });
-      updateQRButtons();
-    };
-
-  }catch(e){
-    showWarningModal("NFC okuma hatası!");
   }
 }
-
 
 
 /* ================= QR NOKTA LİSTESİ ================= */
