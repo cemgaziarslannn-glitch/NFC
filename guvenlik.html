@@ -790,6 +790,9 @@ function hasCameraLib(){
 
 /* ================= QR SCANNER ================= */
 async function startScanner(pointName, btnEl){
+document.querySelectorAll('.qrBtn').forEach(b=>b.classList.add("nfcWaiting"));
+
+
 // NFC bekleme animasyonu başlat
 document.querySelectorAll('.qrBtn').forEach(b=>{
     b.classList.add("nfcWaiting");
@@ -825,6 +828,8 @@ document.querySelectorAll('.qrBtn').forEach(b=>{
       document.querySelectorAll('.qrBtn').forEach(btn=>{
 
         if(btn.dataset.qrid === scannedID){
+		document.querySelectorAll('.qrBtn').forEach(b=>b.classList.remove("nfcWaiting"));
+
 
           matched=true;
 
