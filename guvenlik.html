@@ -539,6 +539,40 @@ function updateQRButtons(){
 
   });
 }
+// ⭐ NFC GLOBAL DİNLEME (TEK DEFA)
+document.addEventListener("click", async function(e){
+
+  const btn = e.target.closest(".qrBtn");
+  if(!btn) return;
+
+  // 🟦 TÜM BUTONLAR YANSIN
+  document.querySelectorAll('.qrBtn')
+      .forEach(b=>b.classList.add("nfcWaiting"));
+
+  try{
+
+      const reader = new NDEFReader();
+      await reader.scan();
+
+      reader.onreading = event => {
+
+          // 🛑 TÜM BUTONLARI SÖNDÜR
+          document.querySelectorAll('.qrBtn')
+              .forEach(b=>b.classList.remove("nfcWaiting"));
+
+          console.log("NFC OKUNDU");
+
+      };
+
+  }
+  catch(err){
+
+      document.querySelectorAll('.qrBtn')
+          .forEach(b=>b.classList.remove("nfcWaiting"));
+
+  }
+
+});
 
 let devriyeTimerInterval = null;
 function startDevriyeTimer(){
