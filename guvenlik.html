@@ -884,7 +884,7 @@ async function startNFCScan(pointName, btnEl){
     const ndef = new NDEFReader();
     await ndef.scan();
 
-    showWarningModal("Telefonu NFC etikete yaklaştırın...",15000);
+    showWarningModal("Telefonu NFC etikete yaklaştırın...",5000);
 
     ndef.onreading = async event => {
 
@@ -1133,6 +1133,7 @@ document.getElementById('flashToggle').addEventListener('click', async () => {
 </script>
 </body>
 </html>
+
 
 
 
