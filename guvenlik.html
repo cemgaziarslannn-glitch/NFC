@@ -795,26 +795,23 @@ if(!snap.exists()){
 devriyeEndBtn.addEventListener('click', async ()=> {
     if(!devriyeStarted) return;
 
-    // 🔥 Firebase’den site QR kodlarını al
-    const activeSite = startPoint; // loadQRPoints() içinde zaten alıyoruz
-    const siteSnapshot = await get(ref(db, activeSite+'qrcodes'));
-    const siteQRCodes = siteSnapshot.exists() ? Object.values(siteSnapshot.val()).map(p => p.name) : [];
-    
-    // 🔥 Eksik noktaları bul
-    const missing = siteQRCodes.filter(qr => !readPoints.includes(qr));
+    const totalPoints = document.querySelectorAll('.qrBtn').length;
+    const readCount = readPoints.length;
+if(readCount < totalPoints){
+    // Eksik devriye modal
+    showConfirmModal(
+        `Devriyeyi Bitirmek İstiyorsunuz. Fakat ${totalPoints - readCount} Nokta Eksik!`,
+        async () => { // "Devriyeyi Bitir" callback
+            await finishDevriye();
+        },
+        () => { /* Devriyeye Devam Et callback */ }
+    );
+    return;
+}
 
-    if(missing.length > 0){
-        showConfirmModal(
-            `Devriyeyi Bitirmek İstiyorsunuz. Fakat ${missing.length} Nokta Eksik: ${missing.join(', ')}`,
-            async () => { await finishDevriye(); },
-            () => {}
-        );
-        return;
-    }
 
-    // 🔥 Devriye tamam kodları
     const devriyeEndTime = new Date();
-    let statusText = "Tam devriye";
+    let statusText = readCount === totalPoints ? "Tam devriye" : "Eksik devriye";
     const weekday = devriyeStartTime.toLocaleDateString('tr-TR',{ weekday:'long' });
     const dateText = `${devriyeStartTime.toLocaleDateString()} (${weekday.charAt(0).toUpperCase()+weekday.slice(1)})`;
 
@@ -831,17 +828,24 @@ devriyeEndBtn.addEventListener('click', async ()=> {
     };
 
     const userDevriyeRef = ref(db,'devriyeHistory/'+(currentUser.username || currentUser.name));
+
+    const snapshot = await get(userDevriyeRef);
+    const allRecords = snapshot.exists() ? Object.entries(snapshot.val()) : [];
+
+    if(allRecords.length >= 1000){
+        allRecords.sort((a,b) => (a[1].timestamp || 0) - (b[1].timestamp || 0));
+        const oldestKey = allRecords[0][0];
+        await set(ref(db,'devriyeHistory/'+(currentUser.username || currentUser.name)+'/'+oldestKey), null);
+    }
+
     await push(userDevriyeRef, devriyeRecord);
+
     await set(activeDevriyeRef, null);
     devriyeStarted = false;
     devriyeEndBtn.disabled = true;
     devriyeStatus.innerText = 'Devriye tamamlandı.';
-    document.querySelectorAll('.qrBtn').forEach(btn=>{
-        btn.classList.remove('read'); 
-        btn.nextElementSibling.innerText = btn.dataset.point;
-    });
+    document.querySelectorAll('.qrBtn').forEach(btn=>{ btn.classList.remove('read'); btn.nextElementSibling.innerText=btn.dataset.point; });
 });
-
 
 
 
