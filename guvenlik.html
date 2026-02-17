@@ -265,30 +265,6 @@ body, div, span, p, h1, h2, h3, h4, h5, h6, label, input, button {
     from{opacity:1;}
     to{opacity:0.4;}
 }
-/* ⚠️ NFC uyarı yazısı için CSS */
-#nfcWarning {
-  display: none;
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: #e74c3c; /* kırmızı */
-  color: #fff;
-  padding: 20px 30px;
-  border-radius: 16px;
-  font-size: 18px;
-  font-weight: 700;
-  text-align: center;
-  z-index: 9999;
-  box-shadow: 0 0 20px rgba(231,76,60,0.8);
-  animation: nfcBlink 1s infinite;
-}
-
-/* ⚡ Yanıp sönme animasyonu */
-@keyframes nfcBlink {
-  0%, 100% { box-shadow: 0 0 20px #e74c3c; opacity: 1; }
-  50% { box-shadow: 0 0 40px #ff4d4d; opacity: 0.6; }
-}
 
 </style>
 </head>
@@ -342,7 +318,6 @@ body, div, span, p, h1, h2, h3, h4, h5, h6, label, input, button {
     <div class="status" id="devriyeStatus">Devriye başlamadı.</div>
     <h3>Devriye Noktaları</h3>
     <div class="qr-list" id="qrListContainer"></div>
-	<div id="nfcWarning">📶 Telefonu NFC etikete yaklaştırın...</div>
   </div>
 <div id="qrScannerModal">
   <div id="qr-reader"></div>
@@ -1154,61 +1129,6 @@ document.getElementById('flashToggle').addEventListener('click', async () => {
     showWarningModal("Bu cihaz flaşı desteklemiyor");
   }
 });
-const nfcWarning = document.getElementById('nfcWarning');
-
-async function startNFCScan(pointName, btnEl){
-    if(!devriyeStarted){
-        showWarningModal("Önce devriyeyi başlatın!");
-        return;
-    }
-    if(!('NDEFReader' in window)){
-        showWarningModal("Bu cihaz NFC desteklemiyor!");
-        return;
-    }
-
-    try{
-        const ndef = new NDEFReader();
-        await ndef.scan();
-
-        // 🔴 Buraya ekle: NFC okut yazısı göster
-        nfcWarning.style.display = 'block';
-
-        ndef.onreading = async event => {
-            const decoder = new TextDecoder();
-            const nfcId = decoder.decode(
-                event.message.records[0].data
-            ).trim();
-
-            let matched=false;
-            document.querySelectorAll('.qrBtn').forEach(btn=>{
-                if(btn.dataset.qrid === nfcId){
-                    matched=true;
-                    btn.classList.add('read');
-                    btn.nextElementSibling.innerText='Tamamlandı';
-                    const p = btn.dataset.point;
-                    if(!readPoints.includes(p)){
-                        readPoints.push(p);
-                    }
-                }
-            });
-
-            // 🔴 NFC okutuldu → yazıyı gizle
-            nfcWarning.style.display = 'none';
-
-            if(!matched){
-                showWarningModal("Bu NFC sisteme kayıtlı değil!");
-                return;
-            }
-
-            await update(activeDevriyeRef,{ readPoints });
-            updateQRButtons();
-        };
-    } catch(e){
-        // hata durumunda da gizle
-        nfcWarning.style.display = 'none';
-        showWarningModal("NFC okuma hatası!");
-    }
-}
 
 </script>
 </body>
