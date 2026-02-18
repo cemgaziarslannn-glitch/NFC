@@ -697,6 +697,10 @@ devriyeStartBtn.addEventListener('click', async () => {
         return; 
     }
     if(devriyeStarted) return;
+	devriyeEndBtn.disabled = false;           // Butonu tekrar tıklanabilir yap
+    devriyeEndBtn.innerText = "Devriyeyi Bitir"; // Yazısını sıfırla
+    devriyeEndBtn.style.backgroundColor = ""; // Eğer rengini değiştirdiysen sıfırla
+    devriyeEndBtn.dataset.loading = "false";
     devriyeStarted = true;
     devriyeStartTime = new Date();
     devriyeEndBtn.disabled = false;
