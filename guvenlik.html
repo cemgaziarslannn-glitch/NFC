@@ -733,35 +733,51 @@ if(!snap.exists()){
 });
 
 devriyeEndBtn.addEventListener('click', async () => {
-    // 1. KONTROL: Eğer zaten basıldıysa veya devriye bitmişse işlemi durdur
-    if (!devriyeStarted || devriyeEndBtn.dataset.loading === "true") return;
+    // 1. KONTROL: Zaten basıldıysa, devriye başlamadıysa veya buton kapalıysa çık
+    if (!devriyeStarted || devriyeEndBtn.disabled || devriyeEndBtn.dataset.loading === "true") return;
 
-    // 2. KİLİTLEME: Butona tekrar basılmasını anında engelle
+    // 2. KİLİTLEME: Anında butonu kapat
     devriyeEndBtn.disabled = true; 
-    devriyeEndBtn.dataset.loading = "true"; // Mantıksal kilit
+    devriyeEndBtn.dataset.loading = "true";
     devriyeEndBtn.innerText = "İşleniyor...";
 
     const totalPoints = document.querySelectorAll('.qrBtn').length;
     const readCount = readPoints.length;
 
+    // Yardımcı fonksiyon: Hem kaydı yapar hem de butonu resetler
+    const finalize = async () => {
+        try {
+            await finishDevriyeWithDate();
+            // Başarılı olursa buton zaten finishDevriyeWithDate içinde disabled kalacak
+            devriyeEndBtn.innerText = "Devriye Tamamlandı"; 
+        } catch (error) {
+            console.error(error);
+            alert("Kayıt sırasında hata oluştu!");
+            // Hata olursa butonu geri aç
+            devriyeEndBtn.disabled = false;
+            devriyeEndBtn.dataset.loading = "false";
+            devriyeEndBtn.innerText = "Devriyeyi Bitir";
+        }
+    };
+
     if (readCount < totalPoints) {
         showConfirmModal(
             `Devriyeyi Bitirmek İstiyorsunuz. Fakat ${totalPoints - readCount} Nokta Eksik!`,
             async () => { 
-                await finishDevriyeWithDate();
-                // İşlem bitince kilidi açmaya gerek yok çünkü sayfa/durum değişiyor
+                // Kullanıcı onay verdi
+                await finalize();
             },
             () => { 
-                // Eğer İPTAL edilirse butonu tekrar aktif hale getir
+                // Kullanıcı İPTAL etti -> Butonu eski haline getir
                 devriyeEndBtn.disabled = false;
                 devriyeEndBtn.dataset.loading = "false";
                 devriyeEndBtn.innerText = "Devriyeyi Bitir";
             }
         );
-        return;
+    } else {
+        // Noktalar tam ise doğrudan bitir
+        await finalize();
     }
-
-    await finishDevriyeWithDate();
 });
 async function finishDevriyeWithDate() {
     const devriyeEndTime = new Date(); // 🔹 Bitiriş zamanı
