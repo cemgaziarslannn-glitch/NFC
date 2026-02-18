@@ -461,17 +461,6 @@ if(!currentUser || currentUser.type!=='security'){
   window.location.href="index.html";
 }
  const activeDevriyeRef = ref(db,'activeDevriye/'+(currentUser.username || currentUser.name));
- function playStartSound() {
-    // Bildirim sesi (temiz bir tınlama)
-    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'); 
-    audio.volume = 0.5; // Sesi %50 yapalım ki çok bağırmasın
-    audio.play().catch(e => console.log("Ses çalınamadı (Etkileşim gereklidir):", e));
-    
-    // Titreşim desteği varsa ufak bir sarsıntı
-    if (navigator.vibrate) {
-        navigator.vibrate(70); 
-    }
-}
 // === Olay Bildir / Kargo Bildir için nöbet kontrolü ===
 async function checkActiveNobet(){
     const snapshot = await get(nobetRecordsRef);
@@ -594,9 +583,13 @@ let readPoints = [];
 let allDevriyeHistory = [];
 
 // 2️⃣ Devriye durumunu dinleme
+// 2️⃣ Devriye durumunu dinleme
 onValue(activeDevriyeRef, snapshot => {
     const val = snapshot.val();
     if(val){
+        // Aktif devriye varsa parlamayı söndür
+        devriyeStartBtn.classList.remove('pulse-blue'); 
+        
         devriyeStarted = true;
         devriyeStartTime = new Date(val.startTime);
         readPoints = Array.isArray(val.readPoints) ? val.readPoints : [];
@@ -604,6 +597,14 @@ onValue(activeDevriyeRef, snapshot => {
         startDevriyeTimer();
         // Sayfa yenilendiğinde butonları yeşile çevirmek için:
         setTimeout(updateQRButtons, 500); 
+    } else {
+        // Aktif devriye yoksa parlamayı başlat
+        devriyeStarted = false;
+        devriyeStartBtn.classList.add('pulse-blue');
+        
+        // Timer ve butonları da sıfırlayalım (tedbir amaçlı)
+        devriyeStatus.innerText = "Devriye bekleniyor...";
+        devriyeEndBtn.disabled = true;
     }
 });
 function updateQRButtons(){
@@ -702,6 +703,7 @@ function showWarningModal(message, duration=3000){
     setTimeout(()=>{ modal.style.display = 'none'; }, duration);
 }
 devriyeStartBtn.addEventListener('click', async () => {
+devriyeStartBtn.classList.remove('pulse-blue');
     const valSnapshot = await get(nobetRecordsRef);
     const val = valSnapshot.val();
     let activeNobet = null;
@@ -717,7 +719,6 @@ devriyeStartBtn.addEventListener('click', async () => {
         return; 
     }
     if(devriyeStarted) return;
-	playStartSound();
 	devriyeEndBtn.disabled = false;           // Butonu tekrar tıklanabilir yap
     devriyeEndBtn.innerText = "Devriyeyi Bitir"; // Yazısını sıfırla
     devriyeEndBtn.style.backgroundColor = ""; // Eğer rengini değiştirdiysen sıfırla
@@ -782,6 +783,7 @@ devriyeEndBtn.addEventListener('click', async () => {
             devriyeEndBtn.disabled = false;
             devriyeEndBtn.dataset.loading = "false";
             devriyeEndBtn.innerText = "Devriyeyi Bitir";
+			devriyeStartBtn.classList.add('pulse-blue');
         }
     };
 
@@ -864,6 +866,7 @@ async function finishDevriyeWithDate() {
         // Arayüzü Sıfırla
         devriyeStarted = false;
         devriyeEndBtn.disabled = true;
+		devriyeStartBtn.classList.add('pulse-blue');
         devriyeStatus.innerText = 'Devriye tamamlandı ve kaydedildi.';
         
         document.querySelectorAll('.qrBtn').forEach(btn => {
@@ -1163,16 +1166,6 @@ document.getElementById('flashToggle').addEventListener('click', async () => {
   }catch(e){
     showWarningModal("Bu cihaz flaşı desteklemiyor");
   }
-});
-// Sayfa yüklendiğinde buton parlamaya başlasın
-if(!devriyeStarted) {
-    devriyeStartBtn.classList.add('pulse-blue');
-}
-
-// Butona basıldığında parlama dursun
-devriyeStartBtn.addEventListener('click', () => {
-    devriyeStartBtn.classList.remove('pulse-blue');
-    // ... diğer kodların
 });
 </script>
 </body>
